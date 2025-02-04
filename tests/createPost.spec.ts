@@ -17,6 +17,18 @@ interface Params{
         "raw": string
       };
       categories: number[];
+      modified: string;
+      modified_gmt: string;
+      password: string;
+      slug: string;
+      status: string;
+      type: string;
+      link: string;
+      excerpt: {
+        "raw": string,
+        "rendered": string;
+        "protected": boolean;
+      };
     }
 test.describe('createPost', () => {
 const baseURL = 'https://dev.emeli.in.ua/wp-json/wp/v2';
@@ -57,6 +69,50 @@ test ('Створення статті - позитивний кейс' , async 
     expect (createPost.categories).toBeDefined();  // перевірка що поле існує//
     expect (Array.isArray(createPost.categories)).toBe(true);
     // expect (createPost.categories[1]).toBeTruthy();
-
+    expect(createPost.categories.length).toBeGreaterThan(0);
+    createPost.categories.forEach(category => {
+      expect(typeof category).toBe("number");
+    });
+    expect (createPost.modified).toMatch(isoDateRegex);
+    expect (createPost.modified_gmt).toMatch(isoDateRegex);
+    expect(createPost.link).toMatch(urlRegex);
+    expect(createPost.password).toBe('');
+    expect(createPost.slug).toBe('');
+    expect(createPost.password).toBeDefined();
+    expect(createPost.slug).toBeDefined();
+    const allowedStatuses = ["publish", "future", "draft", "pending", "private"];
+    expect(allowedStatuses).toContain(createPost.status);
+    expect(createPost.status).toBeDefined();
+    expect(createPost.type).toBeDefined();
+    expect(createPost.excerpt.raw).toBeDefined();
+    expect (stripHtml(createPost.excerpt.rendered)).toContain(createData.content);
+    expect (createPost.excerpt.protected).toBe(false);
+    const editStartTime = Date.now();
+    const updateData = {
+      title: 'updateTitle',
+      content: 'updateContent'
+    }
+    const updateResponse = await request.put(`${baseURL}/posts/${createPost.id}`, {
+      headers:{
+        'Authorization':`Basic ${credentials}`,
+        'Content-Type':'application/json'
+    },
+    data: updateData
+    })
+    const editTime = Date.now() - editStartTime;
+    expect (editTime).toBeLessThan(perfomanceTimeOut);
+    expect(updateResponse.status()).toBe(200);
+    console.log(`${createPost.id}`);
+    const deleteResponse = await request.delete(`${baseURL}/posts/${createPost.id}?force=true`, {
+      headers:{
+        'Authorization':`Basic ${credentials}`,
+        'Content-Type':'application/json'
+    },
+  })
+  const deleteStartTime = Date.now();
+  const deleteTime = Date.now() - deleteStartTime;
+  expect (deleteTime).toBeLessThan(perfomanceTimeOut);
+  expect (deleteResponse.status()).toBe(200);
+  console.log(`${createPost.id}` + ` видалено`);
 });
 })
